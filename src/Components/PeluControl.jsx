@@ -17,6 +17,9 @@ function PeluControl(){
     const [porPagina, setPorPagina] = useState(2);  //Aqui ponemos cuantos resultados mostramos por pagina, pondremos 2 para probar
     const [ordenarPor, setOrdenarPor] = useState("nombre"); //Aqui ponemos el campo por el que ordenara que puede ser nombre o telefono
     const [orden, setOrden] = useState("asc");  //Ordenamos por ascendente o descendente
+    const [mostrarFormulario, setMostrarFormulario] = useState(false); // Controla la visibilidad del formulario 
+const [nuevoCliente, setNuevoCliente] = useState({ nombre: "", telefono: "" }); // Almacena temporalmente los datos que el usuario esta introduciendo en el formulario.
+const [errores, setErrores] = useState({}); // Almacena un objeto con los mensajes de error de validacion
 
     //Simulamos la carga de clientes
     useEffect(() => {
@@ -25,6 +28,9 @@ function PeluControl(){
             setClientes(clientesIniciales);
             setCargando(false); //Desactivamos el estado de cargando
         }, 2000);
+
+        return () => clearTimeout(timer);
+
     }, [cargando])
 
     //Si esta cargando saldra este mensaje
@@ -41,6 +47,50 @@ function PeluControl(){
         </div>
     );
     
+    const validarCliente = () => {
+        const nuevosErrores = {};
+        
+        
+        if (!nuevoCliente.nombre.trim()) {
+            nuevosErrores.nombre = "El nombre no puede estar vacio";
+        }
+
+        // Se eliminan espacios para validar correctamente la longitud y el formato numérico.
+        const telefonoLimpio = nuevoCliente.telefono.replace(/\s/g, ''); 
+        if (!/^\d+$/.test(telefonoLimpio)) {
+            nuevosErrores.telefono = "Introduzca un numero de telefono valido";
+        } else if (telefonoLimpio.length < 9 || telefonoLimpio.length > 10) {
+            nuevosErrores.telefono = "El telefono debe de ser de 9 digitos";
+        } 
+        
+        setErrores(nuevosErrores);
+        return Object.keys(nuevosErrores).length === 0;
+    };
+
+    const handleSubmit = (e) => {
+        e.preventDefault();
+        
+        if (validarCliente()) {
+            //  Generamos un nuevo ID unico para el cliente que se cree 
+            const nuevoId = clientes.length > 0 
+                ? Math.max(...clientes.map(c => c.id)) + 1 
+                : 1;
+
+            const clienteFinal = {
+                id: nuevoId,
+                nombre: nuevoCliente.nombre.trim(),
+                telefono: nuevoCliente.telefono.replace(/\s/g, ''),
+            };
+
+            
+            setClientes([...clientes, clienteFinal]);
+
+            // Volvemos a poner el formulario limpio y lo ocultamos
+            setNuevoCliente({ nombre: "", telefono: "" });
+            setErrores({});
+            setMostrarFormulario(false);
+        }
+    };
 
     //Aqui se crea un array que guarda solo los clientes que coincida alguno de sus campos con la busqueda
     const Filtrados = clientes.filter((e) =>
@@ -110,6 +160,9 @@ function PeluControl(){
 
     return(
         <div>
+
+            
+
             <h1>Barra de busqueda de clientes</h1>
             <input type="text" name="busqueda" onChange={(e) => {
                 {/*e.target.value guarda el texto actual del input en este caso en buscar*/}
@@ -159,7 +212,52 @@ function PeluControl(){
         <div>
             <button onClick={() => cambiarPagina(paginaActual - 1)} >Atras</button>
             <button onClick={() => cambiarPagina(paginaActual + 1)}>Siguiente</button>
+            <br /><br />
       </div>
+   
+            {mostrarFormulario && (
+                <div>
+                    
+                    <h2>Crear Nuevo Cliente</h2>
+                    <form onSubmit={handleSubmit}>
+                        <div>
+                            <label htmlFor="nombre">Nombre:</label>
+                            <input 
+                                id="nombre"
+                                type="text" 
+                                value={nuevoCliente.nombre} 
+                                onChange={(e) => setNuevoCliente({...nuevoCliente, nombre: e.target.value})}
+                                placeholder="Nombre"
+                            />
+                            {<p >{errores.nombre}</p>}
+                        </div>
+
+                        <div>
+                            <label htmlFor="telefono">Teléfono:</label>
+                            <input 
+                                id="telefono"
+                                type="text" 
+                                value={nuevoCliente.telefono} 
+                                onChange={(e) => setNuevoCliente({...nuevoCliente, telefono: e.target.value})}
+                                placeholder="teléfono"
+                            />
+                            {<p>{errores.telefono}</p>}
+                        </div>
+                        <button type="submit" >Guardar Cliente</button>
+                        <br />
+                    </form>
+                </div>
+            )}
+            <button 
+                onClick={() => {
+                   
+                    setMostrarFormulario(!mostrarFormulario); 
+                    setNuevoCliente({ nombre: "", telefono: "" }); //  Limpiamos el formulario
+                    setErrores({});
+                }}>
+                {mostrarFormulario ? "Cancelar" : "Añadir cliente"}
+                
+            </button>
         </div> 
     );
 }
